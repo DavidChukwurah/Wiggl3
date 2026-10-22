@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wiggl3: stay online while you are away</title>
+<meta name="description" content="wiggl3 nudges your cursor when you are idle so chat apps do not show Away. Windows, macOS and Linux.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231e1e20'/%3E%3Ccircle cx='50' cy='50' r='16' fill='%23f5f5f7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Ubuntu:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f2f2f4; --panel: #ffffff; --ink: #1d1d1f; --mute: #6e6e73; --line: #d9d9de;
+    --btn: #1d1d1f; --btn-ink: #f5f5f7; --track: #1d1d1f; --knob: #ffffff;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141415; --panel: #1e1e20; --ink: #f5f5f7; --mute: #9a9aa0; --line: #343437;
+      --btn: #f5f5f7; --btn-ink: #1d1d1f; --track: #f5f5f7; --knob: #1d1d1f;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 Ubuntu, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 48px 24px 72px; }
+  .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; min-height: 420px; }
+  h1 { font: 400 clamp(64px, 11vw, 120px)/0.9 "Jersey 10", ui-monospace, Menlo, Consolas, monospace; margin: 0 0 18px; letter-spacing: 0.01em; }
+  .lead { font-size: 19px; max-width: 30ch; margin: 0 0 28px; }
+  .btn { display: inline-block; background: var(--btn); color: var(--btn-ink); padding: 15px 26px; border-radius: 12px; font-weight: 500; text-decoration: none; font-size: 17px; }
+  .btn:focus-visible, a:focus-visible { outline: 3px solid var(--mute); outline-offset: 3px; }
+  .sub { color: var(--mute); font-size: 14px; margin-top: 12px; min-height: 1.5em; }
+  /* a drawing of the real window */
+  .win { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 22px 26px; width: 100%; max-width: 340px; margin-inline: auto; box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+  .dots { display: flex; gap: 8px; margin-bottom: 18px; } .dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .state { font: 400 34px/1 "Jersey 10", ui-monospace, monospace; }
+  .toggle { width: 34px; height: 21px; border-radius: 11px; background: var(--track); position: relative; }
+  .toggle::after { content: ""; position: absolute; width: 17px; height: 17px; border-radius: 50%; background: var(--knob); top: 2px; right: 2px; }
+  .lbl { color: var(--mute); font-size: 12px; margin: 18px 0 6px; }
+  .sel { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 8px 0 0; }
+  .card { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 18px; }
+  .card h3 { margin: 0 0 2px; font-size: 17px; } .card p { margin: 0 0 12px; color: var(--mute); font-size: 14px; }
+  .card a { color: var(--ink); font-weight: 500; }
+  h2 { font: 400 40px/1 "Jersey 10", ui-monospace, monospace; margin: 64px 0 16px; }
+  ol, ul { padding-left: 1.2em; } li { margin: 6px 0; }
+  .note { color: var(--mute); font-size: 14px; }
+  footer { margin-top: 56px; color: var(--mute); font-size: 14px; }
+  footer a { color: var(--ink); }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; min-height: 0; gap: 32px; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div>
+      <h1>wiggl3</h1>
+      <p class="lead">Stay online while you are away. It nudges the cursor when you go idle, so chat apps don't flip to "Away".</p>
+      <a class="btn" id="main" href="#all">Download</a>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="win" aria-hidden="true">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="row"><span class="state">Online</span><span class="toggle"></span></div>
+      <div class="lbl">Interval</div><div class="sel">1 minute</div>
+      <div class="lbl">Duration</div><div class="sel">Until I turn it off</div>
+    </div>
+  </section>
+
+  <h2 id="all">All downloads</h2>
+  <div class="grid" id="cards"></div>
+  <p class="note">Free and open source (MIT). No account, no internet connection needed, nothing collected. Roughly 4 to 7 MB.</p>
+
+  <h2>First time you open it</h2>
+  <div id="help"></div>
+
+  <h2>What it does</h2>
+  <ul>
+    <li>Moves the cursor across your screens only when you have been idle, every 15 seconds to 4 minutes (your choice).</li>
+    <li>Runs for as long as you say: until you turn it off, 1, 2, 4 or 8 hours, or between two times you pick.</li>
+    <li>Keeps the screen awake while it is on.</li>
+    <li>Lives in the tray or menu bar; closing the window keeps it running. One copy at a time.</li>
+  </ul>
+
+  <footer>
+    <a id="rel" href="#">All releases and checksums</a> &middot; <a id="src" href="#">Source code</a>
+    <p>Not signed with a paid certificate, so Windows and macOS show a one-time warning. wiggl3 does not hide from monitoring software; check your workplace rules.</p>
+  </footer>
+</main>
+
+<script>
+  // The repository that holds the releases. Change this one line if the repository has another name.
+  const REPO = "DavidChukwurah/wiggl3";
+
+  const base = `https://github.com/${REPO}/releases/latest`;
+  const dl = (f) => `${base}/download/${f}`;
+  const FILES = {
+    win:   { name: "Windows",          file: "wiggl3-windows-x64.exe",         note: "Windows 10 and 11, 64-bit" },
+    mac:   { name: "macOS",            file: "wiggl3-mac-universal.dmg",       note: "macOS 11+, Apple silicon and Intel" },
+    linux: { name: "Linux (Intel/AMD)", file: "wiggl3-linux-x86_64.tar.gz",    note: "Any desktop distribution, X11 or Wayland" },
+    arm:   { name: "Linux (ARM)",      file: "wiggl3-linux-aarch64.tar.gz",    note: "Raspberry Pi 4/5, ARM laptops (64-bit)" },
+  };
+  const HELP = {
+    win:   ["Double-click the downloaded file. Nothing to install.",
+            "If Windows says \u201CWindows protected your PC\u201D, click More info, then Run anyway.",
+            "Find the icon by the clock (click the ^ arrow if hidden)."],
+    mac:   ["Open the .dmg and drag wiggl3 onto Applications.",
+            "First time: right-click wiggl3, choose Open, then Open again.",
+            "When asked, allow it under System Settings > Privacy & Security > Accessibility. That is what lets it move the cursor."],
+    linux: ["Unpack it: tar xzf wiggl3-linux-*.tar.gz, then open the wiggl3 folder.",
+            "Run ./wiggl3, or ./install.sh to add it to your applications menu (no sudo).",
+            "On GNOME, add the \u201CAppIndicator\u201D extension to get a tray icon; otherwise closing the window quits it."],
+  };
+
+  function detect() {
+    const ua = navigator.userAgent || "";
+    const plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+    if (/android|iphone|ipad|ipod/i.test(ua)) return null;
+    if (/win/i.test(plat) || /Windows/.test(ua)) return "win";
+    if (/mac/i.test(plat) || /Macintosh/.test(ua)) return "mac";
+    if (/linux|x11|cros/i.test(plat + ua)) return /aarch64|arm/i.test(plat + ua) ? "arm" : "linux";
+    return "win" === plat ? "win" : "linux";
+  }
+
+  const here = detect();
+  const main = document.getElementById("main"), sub = document.getElementById("sub");
+  if (here) {
+    const f = FILES[here];
+    main.textContent = `Download for ${f.name}`;
+    main.href = dl(f.file);
+    sub.textContent = `${f.file}  \u00B7  ${f.note}`;
+  } else {
+    main.textContent = "See all downloads";
+    sub.textContent = "wiggl3 is a desktop app. Open this page on a Windows, Mac or Linux computer.";
+  }
+
+  const cards = document.getElementById("cards");
+  for (const k of ["win", "mac", "linux", "arm"]) {
+    const f = FILES[k], d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML = `<h3></h3><p></p><a></a>`;
+    d.querySelector("h3").textContent = f.name;
+    d.querySelector("p").textContent = f.note;
+    const a = d.querySelector("a"); a.href = dl(f.file); a.textContent = f.file;
+    cards.appendChild(d);
+  }
+
+  const help = document.getElementById("help");
+  const order = here && HELP[here === "arm" ? "linux" : here] ? [here === "arm" ? "linux" : here] : ["win", "mac", "linux"];
+  for (const k of order) {
+    const h = document.createElement("h3"); h.textContent = k === "linux" ? "Linux" : FILES[k].name;
+    const ol = document.createElement("ol");
+    for (const s of HELP[k]) { const li = document.createElement("li"); li.textContent = s; ol.appendChild(li); }
+    help.append(h, ol);
+  }
+  if (here) {
+    const p = document.createElement("p"); p.className = "note";
+    p.textContent = "Other systems: pick them in the list above; their steps are in the README.";
+    help.appendChild(p);
+  }
+  document.getElementById("rel").href = base;
+  document.getElementById("src").href = `https://github.com/${REPO}`;
+</script>
+</body>
+</html>
